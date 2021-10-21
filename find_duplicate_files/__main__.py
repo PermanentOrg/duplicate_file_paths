@@ -2,8 +2,9 @@
 
 import argparse
 import mysql.connector
-from permanent import get_archives
-from models import Archive
+import logging
+from .permanent import get_archives
+from .models import Archive
 
 
 def parse_args():
@@ -31,6 +32,8 @@ def parse_args():
 
 
 def main(cur):
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
     all_archives = get_archives(cur)
     all_dupes = {}
     for archive_id in all_archives:
@@ -56,8 +59,6 @@ if __name__ == "__main__":
             logging.error("Database does not exist")
         else:
             logging.error(err)
-    else:
-        cnx.close()
 
     cursor = cnx.cursor()
     main(cursor)
