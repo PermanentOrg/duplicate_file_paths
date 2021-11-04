@@ -1,10 +1,12 @@
 import logging
+import collections
 
 
 class Archive:
     def __init__(self, cur, archive_id):
         self.cur = cur
         self.archive_id = archive_id
+        self.folders = []
 
     def get_duplicated_paths(self):
         """
@@ -33,47 +35,78 @@ class Archive:
 
         # logging.debug("Finding dupe paths for archive %d", self.archive_id)
         query = (
-            "SELECT folder.folderId, folder.displayName, folder.type, "
-            "folder_link.parentFolderId FROM folder "
-            "INNER JOIN folder_link ON folder.folderId = folder_link.folderId "
-            "WHERE folder.archiveId = %s AND folder.type NOT IN "
+            "SELECT folderId, displayName, type, status "
+            "FROM folder WHERE archiveId = %s AND folder.type NOT IN "
             "('type.folder.vault', 'type.folder.root.vault', 'type.folder.root.share') "
-            "AND folder_link.type NOT IN "
-            "('type.folder_link.root.share', 'type.folder_link.share', 'type.folder_link.vault') "
-            "AND folder.status NOT LIKE 'status.generic.deleted'"
-            "AND folder_link.status NOT LIKE 'status.generic.deleted'"
+            "AND status NOT LIKE 'status.generic.deleted'"
         )
 
         self.cur.execute(query, (self.archive_id,))
         folders = {}
-        for folder_id, display_name, folder_type, parent_folder_id in self.cur:
+        for (
+            folder_id,
+            display_name,
+            folder_type,
+            folder_status,
+        ) in self.cur:
             folders[folder_id] = {
                 "name": display_name,
                 "type": folder_type,
-                "parent_id": parent_folder_id,
+                "status": folder_status,
+                "parent_folders": [],
             }
 
-        folders_with_paths = self.recursively_organize_folder_paths(folders)
+        for folder in folders:
+            query = (
+                "SELECT parentFolderId FROM folder_link WHERE folderId = %s "
+                "AND archiveId = %s AND type NOT IN "
+                "('type.folder_link.root.share', 'type.folder_link.share', 'type.folder_link.vault') "
+                "AND status NOT LIKE 'status.generic.deleted'"
+            )
+            self.cur.execute(query, (folder, self.archive_id))
+            for (parent_folder_id,) in self.cur:
+                folders[folder]["parent_folders"].append(parent_folder_id)
+
+        self.recursively_organize_folder_paths(folders)
+
+        if len(self.folders) != len(set(self.folders)):
+            logging.debug(self.archive_id)
+            print([item for item, count in collections.Counter(self.folders).items() if count > 1])
 
         return False
 
     def recursively_organize_folder_paths(self, folders):
         folders_with_paths = {}
         for folder_id, values in folders.items():
-            parent_id = values["parent_id"]
+            parent_ids = values["parent_folders"]
             path = "/" + values["name"]
-            if parent_id:
-                while parent_id:
-                    if parent_id not in folders:
-                        logging.debug(
-                            "Error, missing parent_id %d in archive: %d",
-                            parent_id,
-                            self.archive_id,
-                        )
-                        parent_id = None
-                    else:
-                        parent = folders[parent_id]
-                        path = "/" + parent["name"] + path
-                        parent_id = parent["parent_id"]
-            folders_with_paths[folder_id] = {"type": values["type"], "path": path}
+            if parent_ids == []:  # This is the Archive root
+                folders_with_paths[folder_id] = {
+                    "type": values["type"],
+                    "path": path,
+                }
+                self.folders.append(path)
+            else:
+                for parent_id in parent_ids:
+                    current_parent = parent_id
+                    while current_parent:
+                        if current_parent not in folders:
+                            logging.debug(
+                                "Error, missing parent_id %d for folder %d in archive %d.",
+                                current_parent,
+                                folder_id,
+                                self.archive_id,
+                            )
+                            current_parent = None
+                        else:
+                            parent = folders[current_parent]
+                            path = "/" + parent["name"] + path
+                            current_parent = parent["parent_folders"][0] if len(parent["parent_folders"]) else None
+
+                    folders_with_paths[folder_id] = {
+                        "type": values["type"],
+                        "path": path,
+                    }
+                    self.folders.append(path)
+
         return folders_with_paths
