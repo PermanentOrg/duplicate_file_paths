@@ -26,6 +26,9 @@ class Archive:
          - type.folder.root.share
          - type.folder_link.root.share
          - type.folder_link.share
+
+        Folder statuses excluded:
+         - status.generic.deleted
         """
 
         # logging.debug("Finding dupe paths for archive %d", self.archive_id)
@@ -36,7 +39,9 @@ class Archive:
             "WHERE folder.archiveId = %s AND folder.type NOT IN "
             "('type.folder.vault', 'type.folder.root.vault', 'type.folder.root.share') "
             "AND folder_link.type NOT IN "
-            "('type.folder_link.root.share', 'type.folder_link.share', 'type.folder_link.vault')"
+            "('type.folder_link.root.share', 'type.folder_link.share', 'type.folder_link.vault') "
+            "AND folder.status NOT LIKE 'status.generic.deleted'"
+            "AND folder_link.status NOT LIKE 'status.generic.deleted'"
         )
 
         self.cur.execute(query, (self.archive_id,))
