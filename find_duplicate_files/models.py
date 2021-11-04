@@ -16,11 +16,15 @@ class Archive:
          - type.folder.root.private
          - type.folder.root.public
          - type.folder.root.root
-         - type.folder.root.share
 
         Folder types excluded because deprecated:
          - type.folder.vault
          - type.folder.root.vault
+
+        Folder types excluded because they belong to a different archive:
+         - type.folder.root.share
+         - type.folder_link.root.share
+         - type.folder_link.share
         """
 
         logging.debug("Finding dupe paths for archive %d", self.archive_id)
@@ -29,7 +33,8 @@ class Archive:
             "folder_link.parentFolderId FROM folder "
             "INNER JOIN folder_link ON folder.folderId = folder_link.folderId "
             "WHERE folder.archiveId = %s AND folder.type NOT IN "
-            "('type.folder.vault', 'type.folder.root.vault')"
+            "('type.folder.vault', 'type.folder.root.vault', 'type.folder.root.share') "
+            "AND folder_link.type NOT IN ('type.folder_link.root.share', 'type.folder_link.share')"
         )
 
         self.cur.execute(query, (self.archive_id,))
@@ -60,6 +65,6 @@ def recursively_organize_folder_paths(folders):
                     parent = folders[parent_id]
                     path = "/" + parent["name"] + path
                     parent_id = parent["parent_id"]
-        logging.debug(path)
+        #logging.debug(path)
         folders_with_paths[folder_id] = {"type": values["type"], "path": path}
     return folders_with_paths
