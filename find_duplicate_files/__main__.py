@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
-import mysql.connector
 import logging
+
+import mysql.connector
+
 from .permanent import get_archives
 from .models import Archive
 
@@ -35,12 +37,8 @@ def main(cur):
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
     all_archives = get_archives(cur)
-    all_dupes = {}
-    for archive_id in all_archives:
-        duplicated_paths = Archive(cur, archive_id).get_duplicated_paths()
-        if duplicated_paths:
-            all_dupes[archive_id] = duplicated_paths
-    print(all_dupes)
+    for archive_id, email in all_archives.items():
+        Archive(cur, archive_id, email).get_duplicated_paths()
 
 
 if __name__ == "__main__":
@@ -53,9 +51,9 @@ if __name__ == "__main__":
             database=args.database,
         )
     except mysql.connector.Error as err:
-        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+        if err.errno == mysql.connector.errorcode.ER_ACCESS_DENIED_ERROR:
             logging.error("Something is wrong with your user name or password")
-        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+        elif err.errno == mysql.connector.errorcode.ER_BAD_DB_ERROR:
             logging.error("Database does not exist")
         else:
             logging.error(err)

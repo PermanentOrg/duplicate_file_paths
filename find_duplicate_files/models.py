@@ -3,9 +3,10 @@ import collections
 
 
 class Archive:
-    def __init__(self, cur, archive_id):
+    def __init__(self, cur, archive_id, email):
         self.cur = cur
         self.archive_id = archive_id
+        self.email = email
         self.folders = []
 
     def get_duplicated_paths(self):
@@ -32,8 +33,7 @@ class Archive:
         Folder statuses excluded:
          - status.generic.deleted
         """
-
-        # logging.debug("Finding dupe paths for archive %d", self.archive_id)
+        # Get all valid folders associated with an archive
         query = (
             "SELECT folderId, displayName, type, status "
             "FROM folder WHERE archiveId = %s AND folder.type NOT IN "
@@ -56,6 +56,7 @@ class Archive:
                 "parent_folders": [],
             }
 
+        # Find all folder links for found folders
         for folder in folders:
             query = (
                 "SELECT parentFolderId FROM folder_link WHERE folderId = %s "
@@ -67,13 +68,23 @@ class Archive:
             for (parent_folder_id,) in self.cur:
                 folders[folder]["parent_folders"].append(parent_folder_id)
 
+        # Build directory hierarchy
         self.recursively_organize_folder_paths(folders)
 
+        # Identify duplicates
         if len(self.folders) != len(set(self.folders)):
-            logging.debug(self.archive_id)
-            print([item for item, count in collections.Counter(self.folders).items() if count > 1])
+            logging.debug(
+                "Duplicates found for archive %s %s", self.archive_id, self.email
+            )
+            duplicates = "\n\t-".join(
+                [
+                    f"{item} [{count}]"
+                    for item, count in collections.Counter(self.folders).items()
+                    if count > 1
+                ]
+            )
+            logging.debug("\n\t-%s", duplicates)
 
-        return False
 
     def recursively_organize_folder_paths(self, folders):
         folders_with_paths = {}
@@ -101,12 +112,17 @@ class Archive:
                         else:
                             parent = folders[current_parent]
                             path = "/" + parent["name"] + path
-                            current_parent = parent["parent_folders"][0] if len(parent["parent_folders"]) else None
+                            current_parent = (
+                                parent["parent_folders"][0]
+                                if len(parent["parent_folders"])
+                                else None
+                            )
 
                     folders_with_paths[folder_id] = {
                         "type": values["type"],
                         "path": path,
                     }
                     self.folders.append(path)
+                    path = "/" + values["name"]
 
         return folders_with_paths
