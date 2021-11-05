@@ -85,17 +85,11 @@ class Archive:
             )
             logging.debug("\n\t-%s", duplicates)
 
-
     def recursively_organize_folder_paths(self, folders):
-        folders_with_paths = {}
         for folder_id, values in folders.items():
             parent_ids = values["parent_folders"]
             path = "/" + values["name"]
             if parent_ids == []:  # This is the Archive root
-                folders_with_paths[folder_id] = {
-                    "type": values["type"],
-                    "path": path,
-                }
                 self.folders.append(path)
             else:
                 for parent_id in parent_ids:
@@ -118,11 +112,5 @@ class Archive:
                                 else None
                             )
 
-                    folders_with_paths[folder_id] = {
-                        "type": values["type"],
-                        "path": path,
-                    }
                     self.folders.append(path)
                     path = "/" + values["name"]
-
-        return folders_with_paths
