@@ -7,6 +7,8 @@ class Archive:
         self.cur = cur
         self.archive_id = archive_id
         self.email = email
+        self.duplicates_found = False
+        self.contains_errors = False
         self.folders = []
 
     def get_duplicated_paths(self):
@@ -71,7 +73,7 @@ class Archive:
         # Build directory hierarchy
         self.recursively_organize_folder_paths(folders)
 
-        # Identify duplicates
+        # Identify archives with duplicate paths
         if len(self.folders) != len(set(self.folders)):
             logging.debug(
                 "Duplicates found for archive %s %s", self.archive_id, self.email
@@ -84,6 +86,7 @@ class Archive:
                 ]
             )
             logging.debug("\n\t-%s", duplicates)
+            self.duplicates_found = True
 
     def recursively_organize_folder_paths(self, folders):
         for folder_id, values in folders.items():
@@ -103,6 +106,7 @@ class Archive:
                                 self.archive_id,
                             )
                             current_parent = None
+                            self.contains_errors = True
                         else:
                             parent = folders[current_parent]
                             path = "/" + parent["name"] + path
