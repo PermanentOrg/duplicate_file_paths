@@ -4,7 +4,7 @@ def get_archives(cur):
         "INNER JOIN account_archive ON archive.archiveId = account_archive.archiveId "
         "INNER JOIN account ON account_archive.accountId = account.accountId "
         "WHERE archive.type IS NOT NULL AND archive.status LIKE 'status.generic.ok' "
-        "ORDER BY archive.archiveId DESC"
+        "AND account.type LIKE 'type.account.standard' ORDER BY archive.archiveId DESC"
     )
     cur.execute(query)
     all_archives = {}
