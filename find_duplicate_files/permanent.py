@@ -1,3 +1,5 @@
+import logging
+
 def get_archives(cur):
     query = (
         "SELECT archive.archiveId, account.primaryEmail FROM archive "
@@ -10,6 +12,8 @@ def get_archives(cur):
     )
     cur.execute(query)
     all_archives = {}
-    for account_id, email in cur:
-        all_archives[account_id] = email
+    for archive_id, email in cur:
+        if archive_id in all_archives:
+            logging.warn("Error on archive %s, more than one owner.", archive_id)
+        all_archives[archive_id] = email
     return all_archives
