@@ -8,7 +8,8 @@ def get_archives(cur):
         "WHERE archive.type IS NOT NULL AND archive.status LIKE 'status.generic.ok' "
         "AND account_archive.status like 'status.generic.ok' "
         "AND account_archive.accessRole like 'access.role.owner'"
-        "AND account.type LIKE 'type.account.standard' ORDER BY archive.archiveId DESC"
+        "AND account.type LIKE 'type.account.standard' "
+        "AND account.createdDT > '2017-01-01 12:00:00' ORDER BY archive.archiveId DESC"
     )
     cur.execute(query)
     all_archives = {}
