@@ -35,7 +35,7 @@ def parse_args():
 
 def main(cur):
     logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
     all_archives = get_archives(cur)
     archive_count = len(all_archives)
     archives_with_dupes = 0

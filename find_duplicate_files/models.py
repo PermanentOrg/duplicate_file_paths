@@ -95,6 +95,7 @@ class Archive:
                     current_parent = parent_id
                     while current_parent:
                         if current_parent not in folders:
+                            # Usually this means that the parent was deleted
                             logging.debug(
                                 "Error, missing parent_id %d for folder %d in archive %d.",
                                 current_parent,
@@ -103,6 +104,7 @@ class Archive:
                             )
                             current_parent = None
                             self.contains_errors = True
+                            path = None
                         else:
                             parent = folders[current_parent]
                             path = "/" + parent["name"] + path
@@ -111,6 +113,6 @@ class Archive:
                                 if len(parent["parent_folders"])
                                 else None
                             )
-
-                    self.folders.append(path)
-                    path = "/" + values["name"]
+                    if path:
+                        self.folders.append(path)
+                        path = "/" + values["name"]
