@@ -37,38 +37,34 @@ class Archive:
         """
         # Get all valid folders associated with an archive
         query = (
-            "SELECT folderId, displayName, type, status "
-            "FROM folder WHERE archiveId = %s AND folder.type NOT IN "
+            "SELECT folder.folderId, folder.displayName, folder.type, folder.status, folder_link.parentFolderId "
+            "FROM folder INNER JOIN folder_link ON folder.folderId = folder_link.folderId "
+            "WHERE folder.archiveId = %s AND folder_link.archiveId = %s AND folder.type NOT IN "
             "('type.folder.vault', 'type.folder.root.vault', 'type.folder.root.share') "
-            "AND status NOT LIKE 'status.generic.deleted'"
+            "AND folder.status NOT LIKE 'status.generic.deleted' AND "
+            "folder_link.type NOT IN "
+            "('type.folder_link.root.share', 'type.folder_link.share', 'type.folder_link.vault') "
+            "AND folder_link.status NOT LIKE 'status.generic.deleted'"
         )
 
-        self.cur.execute(query, (self.archive_id,))
+        self.cur.execute(query, (self.archive_id, self.archive_id))
         folders = {}
         for (
             folder_id,
             display_name,
             folder_type,
             folder_status,
+            parent_folder_id,
         ) in self.cur:
-            folders[folder_id] = {
-                "name": display_name,
-                "type": folder_type,
-                "status": folder_status,
-                "parent_folders": [],
-            }
-
-        # Find all folder links for found folders
-        for folder in folders:
-            query = (
-                "SELECT parentFolderId FROM folder_link WHERE folderId = %s "
-                "AND archiveId = %s AND type NOT IN "
-                "('type.folder_link.root.share', 'type.folder_link.share', 'type.folder_link.vault') "
-                "AND status NOT LIKE 'status.generic.deleted'"
-            )
-            self.cur.execute(query, (folder, self.archive_id))
-            for (parent_folder_id,) in self.cur:
-                folders[folder]["parent_folders"].append(parent_folder_id)
+            if folder_id not in folders:
+                folders[folder_id] = {
+                    "name": display_name,
+                    "type": folder_type,
+                    "status": folder_status,
+                    "parent_folders": [parent_folder_id],
+                }
+            else:
+                folders[folder_id]["parent_folders"].append(parent_folder_id)
 
         # Build directory hierarchy
         self.recursively_organize_folder_paths(folders)
