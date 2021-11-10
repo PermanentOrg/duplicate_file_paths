@@ -3,10 +3,11 @@ import collections
 
 
 class Archive:
-    def __init__(self, cur, archive_id, email):
+    def __init__(self, cur, archive_id, email, name):
         self.cur = cur
         self.archive_id = archive_id
         self.email = email
+        self.name = name
         self.duplicate_folder_count = 0
         self.duplicate_file_count = 0
         self.contains_folder_errors = False
