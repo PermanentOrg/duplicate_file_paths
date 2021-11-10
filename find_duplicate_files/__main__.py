@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+from collections import defaultdict
 
 import mysql.connector
 
@@ -46,18 +47,33 @@ def main(cur):
         "archives_with_duplicated_files": 0,
         "archives_with_file_errors": 0,
     }
+    archive_info = defaultdict(dict)
     for archive_id, email in all_archives.items():
         a = Archive(cur, archive_id, email)
         a.get_duplicated_paths()
-        if a.duplicate_folders_found:
+        if a.duplicate_folder_count:
             statistics["archives_with_duplicated_folders"] += 1
+            archive_info[archive_id]["email"] = a.email
+            archive_info[archive_id][
+                "duplicated_folder_count"
+            ] = a.duplicate_folder_count
         if a.contains_folder_errors:
             statistics["archives_with_folder_errors"] += 1
-        if a.duplicate_files_found:
+        if a.duplicate_file_count:
             statistics["archives_with_duplicated_files"] += 1
+            archive_info[archive_id]["email"] = a.email
+            archive_info[archive_id]["duplicated_file_count"] = a.duplicate_file_count
         if a.contains_record_errors:
             statistics["archives_with_file_errors"] += 1
+
     logging.info(statistics)
+    for archive_id, info in archive_info.items():
+        print(
+            archive_id,
+            info["email"],
+            info.get("duplicated_folder_count"),
+            info.get("duplicated_file_count"),
+        )
 
 
 if __name__ == "__main__":

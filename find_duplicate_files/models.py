@@ -7,8 +7,8 @@ class Archive:
         self.cur = cur
         self.archive_id = archive_id
         self.email = email
-        self.duplicate_folders_found = False
-        self.duplicate_files_found = False
+        self.duplicate_folder_count = 0
+        self.duplicate_file_count = 0
         self.contains_folder_errors = False
         self.contains_record_errors = False
         self.folders = []
@@ -82,30 +82,26 @@ class Archive:
                 self.archive_id,
                 self.email,
             )
-            duplicates = "\n\t-".join(
-                [
-                    f"{item} [{count}]"
-                    for item, count in collections.Counter(self.folders).items()
-                    if count > 1
-                ]
-            )
-            logging.debug("\n\t-%s", duplicates)
-            self.duplicate_folders_found = True
+            duplicates = [
+                f"{item} [{count}]"
+                for item, count in collections.Counter(self.folders).items()
+                if count > 1
+            ]
+            logging.debug("\n\t-%s", "\n\t-".join(duplicates))
+            self.duplicate_folder_count = len(duplicates)
 
         # Identify archives with duplicate file paths
         if len(self.files) != len(set(self.files)):
             logging.debug(
                 "Duplicates files for archive %s %s", self.archive_id, self.email
             )
-            duplicates = "\n\t-".join(
-                [
-                    f"{item} [{count}]"
-                    for item, count in collections.Counter(self.files).items()
-                    if count > 1
-                ]
-            )
-            logging.debug("\n\t-%s", duplicates)
-            self.duplicate_files_found = True
+            duplicates = [
+                f"{item} [{count}]"
+                for item, count in collections.Counter(self.files).items()
+                if count > 1
+            ]
+            logging.debug("\n\t-%s", "\n\t-".join(duplicates))
+            self.duplicate_file_count = len(duplicates)
 
     def recursively_organize_folder_paths(self, folders):
         for folder_id, folder in folders.items():
