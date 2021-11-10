@@ -57,14 +57,15 @@ class Archive:
             parent_folder_id,
         ) in self.cur:
             if folder_id not in folders:
-                folders[folder_id] = {
-                    "name": display_name,
-                    "type": folder_type,
-                    "status": folder_status,
-                    "parent_folders": [parent_folder_id],
-                }
+                folders[folder_id] = Folder(
+                    folder_id,
+                    display_name,
+                    folder_type,
+                    folder_status,
+                    parent_folder_id,
+                )
             else:
-                folders[folder_id]["parent_folders"].append(parent_folder_id)
+                folders[folder_id].parent_folders.append(parent_folder_id)
 
         # Build directory hierarchy
         self.recursively_organize_folder_paths(folders)
@@ -85,13 +86,12 @@ class Archive:
             self.duplicates_found = True
 
     def recursively_organize_folder_paths(self, folders):
-        for folder_id, values in folders.items():
-            parent_ids = values["parent_folders"]
-            path = "/" + values["name"]
-            if parent_ids == []:  # This is the Archive root
+        for folder_id, folder in folders.items():
+            path = "/" + folder.name
+            if folder.parent_folders == []:  # This is the Archive root
                 self.folders.append(path)
             else:
-                for parent_id in parent_ids:
+                for parent_id in folder.parent_folders:
                     current_parent = parent_id
                     while current_parent:
                         if current_parent not in folders:
@@ -107,12 +107,29 @@ class Archive:
                             path = None
                         else:
                             parent = folders[current_parent]
-                            path = "/" + parent["name"] + path
+                            path = "/" + parent.name + path
                             current_parent = (
-                                parent["parent_folders"][0]
-                                if len(parent["parent_folders"])
+                                parent.parent_folders[0]
+                                if len(parent.parent_folders)
                                 else None
                             )
                     if path:
                         self.folders.append(path)
-                        path = "/" + values["name"]
+                        path = "/" + folder.name
+
+
+class Folder:
+    def __init__(self, fid, name, ftype, status, parent_folder_id=None):
+        self.id = fid
+        self.name = name
+        self.type = ftype
+        self.status = status
+        self.parent_folders = []
+        if parent_folder:
+            self.parent_folders.append(parent_folder_id)
+        self.records = []
+
+
+class Records:
+    def __init__(self, rid, name, status):
+        pass

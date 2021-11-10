@@ -5,7 +5,7 @@ import logging
 
 import mysql.connector
 
-from .permanent import get_archives
+from .utils import get_archives
 from .models import Archive
 
 

@@ -1,5 +1,6 @@
 import logging
 
+
 def get_archives(cur):
     query = (
         "SELECT archive.archiveId, account.primaryEmail FROM archive "
