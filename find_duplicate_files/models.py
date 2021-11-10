@@ -7,9 +7,12 @@ class Archive:
         self.cur = cur
         self.archive_id = archive_id
         self.email = email
-        self.duplicates_found = False
-        self.contains_errors = False
+        self.duplicate_folders_found = False
+        self.duplicate_files_found = False
+        self.contains_folder_errors = False
+        self.contains_record_errors = False
         self.folders = []
+        self.files = []
 
     def get_duplicated_paths(self):
         """
@@ -70,10 +73,14 @@ class Archive:
         # Build directory hierarchy
         self.recursively_organize_folder_paths(folders)
 
-        # Identify archives with duplicate paths
+        self.fetch_file_paths(folders)
+
+        # Identify archives with duplicate folders
         if len(self.folders) != len(set(self.folders)):
             logging.debug(
-                "Duplicates found for archive %s %s", self.archive_id, self.email
+                "Duplicates folders found for archive %s %s",
+                self.archive_id,
+                self.email,
             )
             duplicates = "\n\t-".join(
                 [
@@ -83,7 +90,22 @@ class Archive:
                 ]
             )
             logging.debug("\n\t-%s", duplicates)
-            self.duplicates_found = True
+            self.duplicate_folders_found = True
+
+        # Identify archives with duplicate file paths
+        if len(self.files) != len(set(self.files)):
+            logging.debug(
+                "Duplicates files for archive %s %s", self.archive_id, self.email
+            )
+            duplicates = "\n\t-".join(
+                [
+                    f"{item} [{count}]"
+                    for item, count in collections.Counter(self.files).items()
+                    if count > 1
+                ]
+            )
+            logging.debug("\n\t-%s", duplicates)
+            self.duplicate_files_found = True
 
     def recursively_organize_folder_paths(self, folders):
         for folder_id, folder in folders.items():
@@ -103,7 +125,7 @@ class Archive:
                                 self.archive_id,
                             )
                             current_parent = None
-                            self.contains_errors = True
+                            self.contains_folder_errors = True
                             path = None
                         else:
                             parent = folders[current_parent]
@@ -115,21 +137,52 @@ class Archive:
                             )
                     if path:
                         self.folders.append(path)
+                        folders[folder_id].paths.append(path)
                         path = "/" + folder.name
+
+    def fetch_file_paths(self, folders):
+        # Get all valid records associated with an archive
+        query = (
+            "SELECT record.recordId, record.displayName, record.status, folder_link.parentFolderId "
+            "FROM record INNER JOIN folder_link ON record.recordId = folder_link.recordId "
+            "WHERE record.archiveId = %s AND folder_link.archiveId = %s AND record.type NOT IN "
+            "('type.folder.vault', 'type.folder.root.vault', 'type.folder.root.share') "
+            "AND record.status NOT IN ('status.generic.error', 'status.generic.deleted') AND "
+            "folder_link.type NOT IN "
+            "('type.folder_link.root.share', 'type.folder_link.share', 'type.folder_link.vault') "
+            "AND folder_link.status NOT LIKE 'status.generic.deleted'"
+        )
+
+        self.cur.execute(query, (self.archive_id, self.archive_id))
+
+        for (
+            record_id,
+            display_name,
+            record_status,
+            parent_folder_id,
+        ) in self.cur:
+            if parent_folder_id not in folders:
+                # Parent folder was probably deleted
+                logging.debug(
+                    "Unknown parent folder %s for record %s (%s) in archive %s",
+                    parent_folder_id,
+                    record_id,
+                    record_status,
+                    self.archive_id,
+                )
+                self.contains_record_errors = True
+            else:
+                for path in folders[parent_folder_id].paths:
+                    self.files.append(path + "/" + display_name)
 
 
 class Folder:
     def __init__(self, fid, name, ftype, status, parent_folder_id=None):
         self.id = fid
         self.name = name
+        self.paths = []
         self.type = ftype
         self.status = status
         self.parent_folders = []
-        if parent_folder:
+        if parent_folder_id:
             self.parent_folders.append(parent_folder_id)
-        self.records = []
-
-
-class Records:
-    def __init__(self, rid, name, status):
-        pass

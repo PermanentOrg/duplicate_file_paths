@@ -35,24 +35,29 @@ def parse_args():
 
 def main(cur):
     logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
     all_archives = get_archives(cur)
-    archive_count = len(all_archives)
-    archives_with_dupes = 0
-    archives_with_errors = 0
+
+    logging.info("%s total archives", len(all_archives))
+
+    statistics = {
+        "archives_with_duplicated_folders": 0,
+        "archives_with_folder_errors": 0,
+        "archives_with_duplicated_files": 0,
+        "archives_with_file_errors": 0,
+    }
     for archive_id, email in all_archives.items():
         a = Archive(cur, archive_id, email)
         a.get_duplicated_paths()
-        if a.duplicates_found:
-            archives_with_dupes += 1
-        if a.contains_errors:
-            archives_with_errors += 1
-    logging.info(
-        "Out of %s archives, %s have duplicate folders, %s have errors",
-        archive_count,
-        archives_with_dupes,
-        archives_with_errors,
-    )
+        if a.duplicate_folders_found:
+            statistics["archives_with_duplicated_folders"] += 1
+        if a.contains_folder_errors:
+            statistics["archives_with_folder_errors"] += 1
+        if a.duplicate_files_found:
+            statistics["archives_with_duplicated_files"] += 1
+        if a.contains_record_errors:
+            statistics["archives_with_file_errors"] += 1
+    logging.info(statistics)
 
 
 if __name__ == "__main__":
