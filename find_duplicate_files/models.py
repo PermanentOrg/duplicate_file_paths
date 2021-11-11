@@ -138,12 +138,26 @@ class Archive:
                         path = "/" + folder.name
 
     def fetch_file_paths(self, folders):
+        '''
+        Included record statuses:
+          - status.generic.manual_review
+          - status.generic.ok
+          - status.record.converting
+          - status.record.needs_converting
+          - status.record.needs_processing
+          - status.record.processing
+          - status.record.uploaded
+
+        Excluded record statuses:
+          - status.generic.deleted
+          - status.generic.error
+        '''
+
         # Get all valid records associated with an archive
         query = (
             "SELECT record.recordId, record.displayName, record.status, folder_link.parentFolderId "
             "FROM record INNER JOIN folder_link ON record.recordId = folder_link.recordId "
-            "WHERE record.archiveId = %s AND folder_link.archiveId = %s AND record.type NOT IN "
-            "('type.folder.vault', 'type.folder.root.vault', 'type.folder.root.share') "
+            "WHERE record.archiveId = %s AND folder_link.archiveId = %s "
             "AND record.status NOT IN ('status.generic.error', 'status.generic.deleted') AND "
             "folder_link.type NOT IN "
             "('type.folder_link.root.share', 'type.folder_link.share', 'type.folder_link.vault') "
