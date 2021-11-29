@@ -155,7 +155,7 @@ class Archive:
 
         # Get all valid records associated with an archive
         query = (
-            "SELECT record.recordId, record.displayName, record.status, folder_link.parentFolderId "
+            "SELECT record.recordId, record.uploadFileName, record.status, folder_link.parentFolderId "
             "FROM record INNER JOIN folder_link ON record.recordId = folder_link.recordId "
             "WHERE record.archiveId = %s AND folder_link.archiveId = %s "
             "AND record.status NOT IN ('status.generic.error', 'status.generic.deleted') AND "
@@ -168,7 +168,7 @@ class Archive:
 
         for (
             record_id,
-            display_name,
+            upload_name,
             record_status,
             parent_folder_id,
         ) in self.cur:
@@ -184,7 +184,7 @@ class Archive:
                 self.contains_record_errors = True
             else:
                 for path in folders[parent_folder_id].paths:
-                    self.files.append(path + "/" + display_name)
+                    self.files.append(path + "/" + upload_name)
 
 
 class Folder:
